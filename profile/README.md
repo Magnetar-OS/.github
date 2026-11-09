@@ -36,16 +36,16 @@ ships as its own package in the signed `[magnetar]` repository. Take all of them
 
 | | Repository | What it is |
 |---|---|---|
-| Library | [**cosmic-pim**](https://github.com/Magnetar-OS/cosmic-pim) | The substrate under Slate, Circle and Envelope: storage, sync, credentials, iCalendar and vCard. A sync bug is fixed once, not three times. |
-| Library | [**cosmic-ext-nib**](https://github.com/Magnetar-OS/cosmic-ext-nib) | Nib, a rich text engine with no web engine in the pipeline. Envelope’s composer and all of Pencil. |
-| Library | [**cosmic-ext-widgets**](https://github.com/Magnetar-OS/cosmic-ext-widgets) | Widgets libcosmic does not have, such as a sidebar that collapses to a rail. |
-| App | [**magnetar-accounts**](https://github.com/Magnetar-OS/magnetar-accounts) | Online accounts. Add mail, calendar and contacts once — by address, browser sign-in or GNOME Online Accounts — and Envelope, Slate and Circle all use them. |
+| Library | [**cosmic‑pim**](https://github.com/Magnetar-OS/cosmic-pim) | The substrate under Slate, Circle and Envelope: storage, sync, credentials, iCalendar and vCard. A sync bug is fixed once, not three times. |
+| Library | [**cosmic‑ext‑nib**](https://github.com/Magnetar-OS/cosmic-ext-nib) | Nib, a rich text engine with no web engine in the pipeline. Envelope’s composer and all of Pencil. |
+| Library | [**cosmic‑ext‑widgets**](https://github.com/Magnetar-OS/cosmic-ext-widgets) | Widgets libcosmic does not have, such as a sidebar that collapses to a rail. |
+| App | [**magnetar‑accounts**](https://github.com/Magnetar-OS/magnetar-accounts) | Online accounts. Add mail, calendar and contacts once — by address, browser sign-in or GNOME Online Accounts — and Envelope, Slate and Circle all use them. |
 | App | [**grabit**](https://github.com/Magnetar-OS/grabit) | Select text anywhere and get a small bar of actions over it: copy, search, translate, transform, run. Wayland only. |
 | Distribution | [**magnetar**](https://github.com/Magnetar-OS/magnetar) | The live ISO (an overlay on CachyOS’s, not a fork), the PKGBUILDs, and the meta package that turns a CachyOS install into Magnetar. |
-| Distribution | [**arch-repo**](https://github.com/Magnetar-OS/arch-repo) | The signed pacman repository, served from [repo.magnetaros.com](https://repo.magnetaros.com). |
-| Distribution | [**magnetar-web**](https://github.com/Magnetar-OS/magnetar-web) | The source of [magnetaros.com](https://magnetaros.com). |
-| Hardware | [**logitech-bolt-hidpp-dkms**](https://github.com/Magnetar-OS/logitech-bolt-hidpp-dkms) | Hi-res wheel diversion on Logitech Bolt receivers — the MX Master 4 scroll fix — built by DKMS. |
-| Hardware | [**audient-id24-dkms**](https://github.com/Magnetar-OS/audient-id24-dkms) | The Audient iD24 on Linux: a mixer map for snd-usb-audio, built by DKMS, and a UCM profile. |
+| Distribution | [**arch‑repo**](https://github.com/Magnetar-OS/arch-repo) | The signed pacman repository, served from [repo.magnetaros.com](https://repo.magnetaros.com). |
+| Distribution | [**magnetar‑web**](https://github.com/Magnetar-OS/magnetar-web) | The source of [magnetaros.com](https://magnetaros.com). |
+| Hardware | [**logitech‑bolt‑hidpp‑dkms**](https://github.com/Magnetar-OS/logitech-bolt-hidpp-dkms) | Hi-res wheel diversion on Logitech Bolt receivers — the MX Master 4 scroll fix — built by DKMS. |
+| Hardware | [**audient‑id24‑dkms**](https://github.com/Magnetar-OS/audient-id24-dkms) | The Audient iD24 on Linux: a mixer map for snd-usb-audio, built by DKMS, and a UCM profile. |
 
 ## How it’s built
 
