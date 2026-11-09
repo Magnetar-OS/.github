@@ -18,7 +18,7 @@ exist nowhere else.
 
 ## The suite
 
-Every app is held to a named rival, sits on one shared substrate for storage, sync and credentials, and
+Every app is measured against a named rival where one exists, sits on one shared substrate for storage, sync and credentials, and
 ships as its own package in the signed `[magnetar]` repository. Take all of them or only the ones you want.
 
 <p align="center">
