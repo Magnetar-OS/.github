@@ -234,42 +234,75 @@ def dipole(L: float, th0: float = 0.2, steps: int = 72) -> str:
     return 'M' + ' L'.join(pts)
 
 
-def hero(f: Fonts, logo: str) -> str:
-    W, H = 1280, 520
-    rng = random.Random(1054)  # fixed seed: the starfield must not change between builds
-    period = 18.0
-
-    # A field line at azimuth φ projects to x·cos φ, and sits in front of the
-    # star while sin φ > 0. Each tube runs the same cycle, offset by its index.
-    spin = keyframes('spin', 32, lambda t: (
-        f'transform:scaleX({math.cos(2 * math.pi * t):.3f});'
-        f'opacity:{0.5 + 0.5 * math.sin(2 * math.pi * t):.3f}'))
-
+def starfield(rng: random.Random, W: int, H: int, n: int) -> str:
     stars = []
-    for i in range(230):
+    for i in range(n):
         x, y = rng.uniform(0, W), rng.uniform(0, H)
         r = rng.choice([0.5, 0.6, 0.8, 1.0, 1.3])
         op = rng.uniform(0.15, 0.85)
         cls = f' class="tw" style="animation-delay:-{rng.uniform(0, 6):.2f}s;animation-duration:{rng.uniform(3, 7):.1f}s"' if i % 6 == 0 else ''
         stars.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="#DCEBFF" opacity="{op:.2f}"{cls}/>')
+    return f'<g>{"".join(stars)}</g>'
 
+
+def magnetosphere(hues: list[str], loops: list[float], period: float) -> str:
+    """Field lines around a star at the origin, one flux tube per hue, each
+    spinning about the magnetic axis (see SPACE_STYLE) and carrying a particle."""
     tubes = []
-    for i, app in enumerate(APPS):
+    for i, hue in enumerate(hues):
         lines = []
-        for j, (L, w, op) in enumerate([(220, 1.5, 0.9), (150, 1.2, 0.7), (96, 1.0, 0.55)]):
+        for j, (L, w, op) in enumerate(zip(loops, (1.5, 1.2, 1.0), (0.9, 0.7, 0.55))):
             d = dipole(L)
-            lines.append(f'<path d="{d}" stroke="{app.hue}" stroke-width="{w * 4}" stroke-opacity="{op * 0.12:.3f}"/>'
-                         f'<path d="{d}" stroke="{app.hue}" stroke-width="{w}" stroke-opacity="{op}"/>')
+            lines.append(f'<path d="{d}" stroke="{hue}" stroke-width="{w * 4}" stroke-opacity="{op * 0.12:.3f}"/>'
+                         f'<path d="{d}" stroke="{hue}" stroke-width="{w}" stroke-opacity="{op}"/>')
             if j == 0:
                 dur = 5.5 + (i % 3) * 0.8
                 lines.append(f'<circle r="2.4" fill="#FFFFFF"><animateMotion dur="{dur}s" begin="-{i * 0.9:.1f}s" '
                              f'repeatCount="indefinite" path="{d}"/></circle>'
-                             f'<circle r="6" fill="{app.hue}" opacity=".35"><animateMotion dur="{dur}s" '
+                             f'<circle r="6" fill="{hue}" opacity=".35"><animateMotion dur="{dur}s" '
                              f'begin="-{i * 0.9:.1f}s" repeatCount="indefinite" path="{d}"/></circle>')
-        tubes.append(f'<g class="tube" style="animation-delay:-{period * i / len(APPS):.2f}s">{"".join(lines)}</g>')
-
+        tubes.append(f'<g class="tube" style="animation-delay:-{period * i / len(hues):.2f}s">{"".join(lines)}</g>')
     beam = ('<polygon points="-3,-14 3,-14 26,-270 -26,-270" fill="url(#beam)"/>'
             '<polygon points="-1.2,-14 1.2,-14 4,-250 -4,-250" fill="url(#beamcore)"/>')
+    return f'<g class="beam">{beam}<g transform="scale(1 -1)">{beam}</g></g><g class="field">{"".join(tubes)}</g>'
+
+
+def space_defs(W: int, H: int, sky_cx: str) -> str:
+    return f'''
+  <clipPath id="frame"><rect width="{W}" height="{H}" rx="22"/></clipPath>
+  <radialGradient id="sky" cx="{sky_cx}" cy="52%" r="85%"><stop offset="0" stop-color="#101A33"/><stop offset=".55" stop-color="{INK}"/><stop offset="1" stop-color="{VOID}"/></radialGradient>
+  <radialGradient id="halo"><stop offset="0" stop-color="{ICE}" stop-opacity=".55"/><stop offset=".35" stop-color="{ICE}" stop-opacity=".16"/><stop offset="1" stop-color="{ICE}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="core" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="{ICE}"/><stop offset="1" stop-color="#1E8FD0"/></radialGradient>
+  <linearGradient id="beam" x1="0" y1="-14" x2="0" y2="-270" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{ICE}" stop-opacity=".55"/><stop offset="1" stop-color="{ICE}" stop-opacity="0"/></linearGradient>
+  <linearGradient id="beamcore" x1="0" y1="-14" x2="0" y2="-250" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+  <linearGradient id="word" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BFD9FF"/></linearGradient>
+  <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="60"/></filter>'''
+
+
+def space_style(period: float) -> str:
+    # A field line at azimuth φ projects to x·cos φ, and sits in front of the
+    # star while sin φ > 0. Each tube runs the same cycle, offset by its index.
+    spin = keyframes('spin', 32, lambda t: (
+        f'transform:scaleX({math.cos(2 * math.pi * t):.3f});'
+        f'opacity:{0.5 + 0.5 * math.sin(2 * math.pi * t):.3f}'))
+    return (spin +
+            f'.tube{{animation:spin {period}s linear infinite;transform-origin:0 0}}'
+            '.halo{animation:breathe 4.2s ease-in-out infinite alternate;transform-origin:0 0}'
+            '@keyframes breathe{from{transform:scale(.82);opacity:.75}to{transform:scale(1.12);opacity:1}}'
+            '.beam{animation:pulse 2.6s ease-in-out infinite alternate}'
+            '@keyframes pulse{from{opacity:.35}to{opacity:1}}'
+            '.tw{animation:twinkle 5s ease-in-out infinite alternate}'
+            '@keyframes twinkle{from{opacity:.08}to{opacity:.95}}')
+
+
+STAR = ('<circle r="78" fill="url(#halo)" class="halo"/><circle r="15" fill="url(#core)"/>'
+        '<circle r="15" fill="none" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="1"/>')
+
+
+def hero(f: Fonts, logo: str) -> str:
+    W, H = 1280, 520
+    rng = random.Random(1054)  # fixed seed: the starfield must not change between builds
+    period = 18.0
 
     # Right-hand column: mark, wordmark, the dictionary entry from the site's hero.
     x0 = 650
@@ -286,16 +319,7 @@ def hero(f: Fonts, logo: str) -> str:
         defs_y += 16
 
     body = f'''
-<defs>
-  <clipPath id="frame"><rect width="{W}" height="{H}" rx="22"/></clipPath>
-  <radialGradient id="sky" cx="28%" cy="52%" r="85%"><stop offset="0" stop-color="#101A33"/><stop offset=".55" stop-color="{INK}"/><stop offset="1" stop-color="{VOID}"/></radialGradient>
-  <radialGradient id="halo"><stop offset="0" stop-color="{ICE}" stop-opacity=".55"/><stop offset=".35" stop-color="{ICE}" stop-opacity=".16"/><stop offset="1" stop-color="{ICE}" stop-opacity="0"/></radialGradient>
-  <radialGradient id="core" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="{ICE}"/><stop offset="1" stop-color="#1E8FD0"/></radialGradient>
-  <linearGradient id="beam" x1="0" y1="-14" x2="0" y2="-270" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{ICE}" stop-opacity=".55"/><stop offset="1" stop-color="{ICE}" stop-opacity="0"/></linearGradient>
-  <linearGradient id="beamcore" x1="0" y1="-14" x2="0" y2="-250" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
-  <linearGradient id="word" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BFD9FF"/></linearGradient>
-  <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="60"/></filter>
-</defs>
+<defs>{space_defs(W, H, "28%")}</defs>
 <g clip-path="url(#frame)">
   <rect width="{W}" height="{H}" fill="url(#sky)"/>
   <g filter="url(#blur)">
@@ -303,13 +327,10 @@ def hero(f: Fonts, logo: str) -> str:
     <ellipse cx="1080" cy="90" rx="260" ry="120" fill="{CYAN}" opacity=".12"/>
     <ellipse cx="820" cy="520" rx="300" ry="90" fill="#FF6FA8" opacity=".06"/>
   </g>
-  <g>{"".join(stars)}</g>
+  {starfield(rng, W, H, 230)}
   <g transform="translate(330 270) rotate(-22)" fill="none" stroke-linecap="round">
-    <g class="beam">{beam}<g transform="scale(1 -1)">{beam}</g></g>
-    <g class="field">{"".join(tubes)}</g>
-    <circle r="78" fill="url(#halo)" class="halo"/>
-    <circle r="15" fill="url(#core)"/>
-    <circle r="15" fill="none" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="1"/>
+    {magnetosphere([a.hue for a in APPS], [220, 150, 96], period)}
+    {STAR}
   </g>
   {nested(logo, 'mk', x0 - 6, 112, 76)}
   {text(f.display_black, "Magnetar", x0 + 82, 176, 72, "url(#word)", tracking=0.5)}
@@ -318,16 +339,116 @@ def hero(f: Fonts, logo: str) -> str:
   {text(f.mono, 'ARCH · CACHYOS · COSMIC · WAYLAND · RUST', x0, 466, 13.5, FIELD, tracking=2, opacity=0.9)}
   <rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="21.5" fill="none" stroke="{FIELD}" stroke-opacity=".18"/>
 </g>'''
+    return document(W, H, 'Magnetar — COSMIC on CachyOS', body, space_style(period))
 
-    style = (spin +
-             f'.tube{{animation:spin {period}s linear infinite;transform-origin:0 0}}'
-             '.halo{animation:breathe 4.2s ease-in-out infinite alternate;transform-origin:0 0}'
-             '@keyframes breathe{from{transform:scale(.82);opacity:.75}to{transform:scale(1.12);opacity:1}}'
-             '.beam{animation:pulse 2.6s ease-in-out infinite alternate}'
-             '@keyframes pulse{from{opacity:.35}to{opacity:1}}'
-             '.tw{animation:twinkle 5s ease-in-out infinite alternate}'
-             '@keyframes twinkle{from{opacity:.08}to{opacity:.95}}')
-    return document(W, H, 'Magnetar — COSMIC on CachyOS', body, style)
+
+# ------------------------------------------------------------------ banners
+
+@dataclass(frozen=True)
+class Repo:
+    repo: str
+    name: str
+    label: str
+    hue: str
+    tagline: str
+    icon: str | None = None  # app name in com.magnetaros.<icon>.svg, when the repo has one
+
+
+def _app(slug: str) -> App:
+    return next(a for a in APPS if a.slug == slug)
+
+
+# Taglines are the repositories' GitHub descriptions (or, where that reads
+# poorly as a sentence, the README's own opening line).
+REPOS = [
+    *(Repo(a.slug, a.name, a.category.upper(), a.hue, d, a.name) for a, d in [
+        (_app('slate'), 'Calendar and tasks for the COSMIC desktop: plain iCalendar files, CalDAV sync, reminders, a panel applet and a launcher plugin.'),
+        (_app('envelope'), 'Mail for the COSMIC desktop: IMAP and Gmail, browser sign-in, threads, a rich composer, and SMTP sending with a durable outbox.'),
+        (_app('circle'), 'Contacts for the COSMIC desktop: plain vCard files, CardDAV sync, photos and groups.'),
+        (_app('locket'), 'Keep passwords, keys and secrets for your desktop — a Secret Service, SSH agent and vault for COSMIC.'),
+        (_app('jump'), 'A Spotlight-class launcher for COSMIC and GNOME.'),
+        (_app('peek'), 'A QuickLook-class file previewer for the COSMIC desktop.'),
+        (_app('pencil'), 'A rich text editor for the COSMIC desktop: Markdown, MDC, MDX, HTML and plain text, with syntax highlighting, spell checking, a project tree and printing.'),
+        (_app('pocket'), 'Boarding passes, tickets and cards for the COSMIC desktop — held as the .pkpass files they arrived in, with barcodes ready to scan.'),
+    ]),
+    Repo('grabit', 'grabit', 'SELECTION ACTIONS', '#FFC857',
+         'Selection actions for Wayland: copy, search, translate, transform, run. PopClip’s idea, built for Wayland.'),
+    Repo('magnetar-accounts', 'Accounts', 'ONLINE ACCOUNTS', '#7B9CFF',
+         'Add mail, calendar and contacts accounts once — by address, browser sign-in or GNOME Online Accounts — for Envelope, Slate and Circle.'),
+    Repo('cosmic-pim', 'cosmic-pim', 'LIBRARY · PIM SUBSTRATE', FIELD,
+         'The shared substrate under Slate, Circle and Envelope: storage, sync, credentials, and the iCalendar/vCard layer.'),
+    Repo('cosmic-ext-nib', 'Nib', 'LIBRARY · RICH TEXT ENGINE', '#B48CFF',
+         'A rich text engine for COSMIC: a document model with invertible steps, HTML, Markdown, MDC, MDX and plain text in and out, and an editor widget libcosmic does not have.'),
+    Repo('cosmic-ext-widgets', 'cosmic-ext-widgets', 'LIBRARY · WIDGETS', '#5FD3F3',
+         'Widgets libcosmic does not have: an animated reveal, a nav rail, and a sidebar that moves between them.'),
+    Repo('magnetar', 'Magnetar', 'DISTRIBUTION', VIOLET,
+         'COSMIC on CachyOS, as an actual distribution: a live ISO, a pacman repository, and the packages that make a stock CachyOS install into this one.'),
+    Repo('arch-repo', '[magnetar]', 'PACMAN REPOSITORY', CYAN,
+         'The signed [magnetar] pacman repository, served from repo.magnetaros.com. Install and upgrade with plain pacman.'),
+    Repo('magnetar-web', 'magnetaros.com', 'WEBSITE', ICE,
+         'The source of magnetaros.com: a single static page built with Astro, with a live magnetar drawn behind it in three.js.'),
+    Repo('logitech-bolt-hidpp-dkms', 'logitech-bolt-hidpp-dkms', 'HARDWARE · DKMS', '#8FB3D9',
+         'hid-logitech-hidpp with hi-res wheel diversion on Bolt receivers — the MX Master 4 scroll fix — built by DKMS.'),
+    Repo('audient-id24-dkms', 'audient-id24-dkms', 'HARDWARE · DKMS · UCM', '#FF9F6B',
+         'The Audient iD24 on Linux: a snd-usb-audio mixer map built by DKMS, and a UCM profile.'),
+]
+
+
+def banner(f: Fonts, r: Repo, icon: str | None, logo: str) -> str:
+    W, H = 1280, 400
+    rng = random.Random(r.repo)  # per-repo, but stable between builds
+    period = 18.0
+    x0, width = 600, 1280 - 600 - 64
+
+    if r.repo == 'magnetar':
+        hues = [a.hue for a in APPS]
+    else:
+        hues = [r.hue, mix(r.hue, '#FFFFFF', 0.35), mix(r.hue, VIOLET, 0.35), mix(r.hue, CYAN, 0.3)] * 2
+
+    size = 80.0
+    while f.display_black.measure(r.name, size, 0.5) > width:
+        size -= 2
+    for body_size in (23, 21):
+        lines = f.body.wrap(r.tagline, body_size, width)
+        if len(lines) <= 3:
+            break
+    else:
+        raise ValueError(f'{r.repo}: tagline needs {len(lines)} lines, the banner holds 3')
+    lead = body_size * 1.38
+    tag = ''.join(text(f.body, l, x0, 258 + lead * i, body_size, CORONA, opacity=0.86) for i, l in enumerate(lines))
+
+    cx, cy = 300, 200
+    if icon is not None:
+        centre = (f'<circle cx="{cx}" cy="{cy}" r="120" fill="url(#halo)" class="halo" style="transform-origin:{cx}px {cy}px"/>'
+                  + nested(icon, 'ic', cx - 64, cy - 64, 128))
+    elif r.repo in ('magnetar', 'arch-repo', 'magnetar-web'):
+        centre = (f'<circle cx="{cx}" cy="{cy}" r="110" fill="url(#halo)" class="halo" style="transform-origin:{cx}px {cy}px"/>'
+                  f'<circle cx="{cx}" cy="{cy}" r="62" fill="{VOID}" fill-opacity=".72" stroke="{FIELD}" stroke-opacity=".3"/>'
+                  + nested(logo, 'mk', cx - 44, cy - 44, 88))
+    else:
+        centre = f'<g transform="translate({cx} {cy})">{STAR}</g>'
+
+    body = f'''
+<defs>{space_defs(W, H, "24%")}</defs>
+<g clip-path="url(#frame)">
+  <rect width="{W}" height="{H}" fill="url(#sky)"/>
+  <g filter="url(#blur)">
+    <ellipse cx="{cx}" cy="{cy}" rx="300" ry="160" fill="{r.hue}" opacity=".16"/>
+    <ellipse cx="{cx + 80}" cy="{cy + 60}" rx="240" ry="120" fill="{VIOLET}" opacity=".14"/>
+    <ellipse cx="1100" cy="60" rx="260" ry="110" fill="{CYAN}" opacity=".10"/>
+  </g>
+  {starfield(rng, W, H, 170)}
+  <g transform="translate({cx} {cy}) rotate(-22)" fill="none" stroke-linecap="round">
+    {magnetosphere(hues, [210, 145, 92], period)}
+  </g>
+  {centre}
+  {text(f.mono, r.label, x0, 120, 14, mix(r.hue, '#FFFFFF', 0.25), tracking=3)}
+  {text(f.display_black, r.name, x0, 200, size, 'url(#word)', tracking=0.5)}
+  {tag}
+  {text(f.mono, 'PART OF MAGNETAR · COSMIC ON CACHYOS', x0, 362, 12.5, FIELD, tracking=2, opacity=0.85)}
+  <rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="21.5" fill="none" stroke="{FIELD}" stroke-opacity=".18"/>
+</g>'''
+    return document(W, H, f'{r.name} — {r.tagline}', body, space_style(period))
 
 
 # -------------------------------------------------------------------- cards
@@ -478,7 +599,8 @@ def main() -> None:
 
     fonts = load_fonts(args.web)
     logo = (args.brand / 'distribution/logo/magnetar.svg').read_text()
-    OUT.mkdir(parents=True, exist_ok=True)
+    for d in (OUT, OUT / 'repos', OUT / 'icons'):
+        d.mkdir(parents=True, exist_ok=True)
 
     out = {'hero.svg': hero(fonts, logo), 'pill-site.svg': pill(fonts, 'magnetaros.com', None), 'mark.svg': logo}
     for t in (DARK, LIGHT):
@@ -489,6 +611,15 @@ def main() -> None:
         out[f'stats-{t.name}.svg'] = stats(fonts, t)
         out[f'pill-install-{t.name}.svg'] = pill(fonts, 'Install', t)
         out[f'pill-repos-{t.name}.svg'] = pill(fonts, 'All repositories', t)
+        out[f'pill-releases-{t.name}.svg'] = pill(fonts, 'Releases', t)
+
+    # Shared art for every repository's own README: a banner each, and the
+    # app icons for the suite strip in their footers.
+    for r in REPOS:
+        icon = (args.brand / f'icons/hicolor/scalable/apps/com.magnetaros.{r.icon}.svg').read_text() if r.icon else None
+        out[f'repos/{r.repo}.svg'] = banner(fonts, r, icon, logo)
+    for app in APPS:
+        out[f'icons/{app.slug}.svg'] = (args.brand / f'icons/hicolor/scalable/apps/com.magnetaros.{app.name}.svg').read_text()
 
     for name, svg in out.items():
         (OUT / name).write_text(svg)
