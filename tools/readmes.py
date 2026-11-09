@@ -54,9 +54,9 @@ def header(r: Repo) -> str:
 
 <img src="{ASSETS}/repos/{r.repo}.svg" width="100%" alt="{alt}">
 
-<br><br>
-
 {'&nbsp;\n'.join(pills)}
+
+<br>
 
 </div>
 {HEAD_CLOSE}'''
